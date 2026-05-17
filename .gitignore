@@ -1,0 +1,21 @@
+# Xcode
+build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+*.xcuserdatad/
+
+# Swift Package Manager
+.swiftpm/
+.build/
+Packages/
+Package.resolved
+
+# Secrets — DO NOT COMMIT
+WatchDog/Config.plist
+
+# macOS
+.DS_Store
+
+# Tooling
+*.log
