@@ -3,26 +3,14 @@ import SwiftUI
 struct MainTabView: View {
     var body: some View {
         TabView {
-            NavigationStack {
-                Text("Home — coming soon")
-                    .navigationTitle("Home")
-                    .navigationBarTitleDisplayMode(.large)
-            }
-            .tabItem { Label("Home", systemImage: "house.fill") }
+            HomeView()
+                .tabItem { Label("Home", systemImage: "house.fill") }
 
-            NavigationStack {
-                Text("Appliances — coming soon")
-                    .navigationTitle("Appliances")
-                    .navigationBarTitleDisplayMode(.large)
-            }
-            .tabItem { Label("Appliances", systemImage: "refrigerator.fill") }
+            ApplianceListView()
+                .tabItem { Label("Appliances", systemImage: "refrigerator.fill") }
 
-            NavigationStack {
-                Text("Expiry — coming soon")
-                    .navigationTitle("Expiry")
-                    .navigationBarTitleDisplayMode(.large)
-            }
-            .tabItem { Label("Expiry", systemImage: "clock.badge.exclamationmark") }
+            ExpiryListView()
+                .tabItem { Label("Expiry", systemImage: "clock.badge.exclamationmark") }
 
             NavigationStack {
                 Text("Settings — coming soon")

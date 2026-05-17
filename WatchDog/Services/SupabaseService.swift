@@ -5,6 +5,8 @@ enum SupabaseServiceError: LocalizedError {
     case notImplemented
     case missingConfiguration(String)
     case invalidConfiguration(String)
+    case missingIdentityToken
+    case invalidIdentityTokenEncoding
 
     var errorDescription: String? {
         switch self {
@@ -14,6 +16,10 @@ enum SupabaseServiceError: LocalizedError {
             return "Missing configuration key in Config.plist: \(key)"
         case .invalidConfiguration(let key):
             return "Invalid configuration value for key: \(key)"
+        case .missingIdentityToken:
+            return "Apple Sign In did not return an identity token."
+        case .invalidIdentityTokenEncoding:
+            return "Apple identity token could not be decoded."
         }
     }
 }
@@ -59,11 +65,15 @@ final class SupabaseService {
     }
 
     func signInWithApple(idToken: String, nonce: String) async throws {
-        throw SupabaseServiceError.notImplemented
+        let session = try await client.auth.signInWithIdToken(
+            credentials: .init(provider: .apple, idToken: idToken, nonce: nonce)
+        )
+        self.currentUser = session.user
     }
 
     func signOut() async throws {
-        throw SupabaseServiceError.notImplemented
+        try await client.auth.signOut()
+        self.currentUser = nil
     }
 
     func checkSession() async {
