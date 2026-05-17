@@ -1,12 +1,15 @@
 import SwiftUI
 import SwiftData
 import UIKit
+import PhotosUI
 
 struct ApplianceDetailView: View {
     let appliance: Appliance
 
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+
+    @Query private var documents: [Document]
 
     @State private var showCopiedToast = false
     @State private var showEditSheet = false
@@ -15,6 +18,22 @@ struct ApplianceDetailView: View {
     @State private var remind90: Bool = true
     @State private var remind30: Bool = true
     @State private var remind7: Bool = true
+
+    @State private var showAddDocSheet = false
+    @State private var showCamera = false
+    @State private var showPhotosPicker = false
+    @State private var showPDFPicker = false
+    @State private var photoItem: PhotosPickerItem? = nil
+    @State private var selectedDocument: Document? = nil
+
+    init(appliance: Appliance) {
+        self.appliance = appliance
+        let entityId = appliance.id
+        let predicate = #Predicate<Document> {
+            $0.entityType == "appliance" && $0.entityId == entityId
+        }
+        _documents = Query(filter: predicate, sort: \.uploadedAt, order: .reverse)
+    }
 
     private var primaryWarranty: Warranty? {
         appliance.warranties.max(by: { $0.endDate < $1.endDate })
@@ -99,6 +118,9 @@ struct ApplianceDetailView: View {
             dismiss()
         }
         .overlay(alignment: .top) {
+            UploadProgressOverlay()
+        }
+        .overlay(alignment: .top) {
             if showCopiedToast {
                 Text("Copied!")
                     .font(.system(size: 14, weight: .semibold))
@@ -108,6 +130,42 @@ struct ApplianceDetailView: View {
                     .background(Capsule().fill(Color.black.opacity(0.8)))
                     .padding(.top, 8)
                     .transition(.move(edge: .top).combined(with: .opacity))
+            }
+        }
+        .confirmationDialog("Add document", isPresented: $showAddDocSheet, titleVisibility: .visible) {
+            Button("Take photo") { showCamera = true }
+            Button("Choose from library") { showPhotosPicker = true }
+            Button("Pick a file (PDF)") { showPDFPicker = true }
+            Button("Cancel", role: .cancel) {}
+        }
+        .photosPicker(isPresented: $showPhotosPicker, selection: $photoItem, matching: .images)
+        .onChange(of: photoItem) { _, newItem in
+            guard let newItem else { return }
+            Task {
+                if let data = try? await newItem.loadTransferable(type: Data.self),
+                   let image = UIImage(data: data) {
+                    uploadImage(image, docType: .photo)
+                }
+                photoItem = nil
+            }
+        }
+        .fullScreenCover(isPresented: $showCamera) {
+            CameraPicker { image in
+                if let image { uploadImage(image, docType: .photo) }
+                showCamera = false
+            }
+            .ignoresSafeArea()
+        }
+        .sheet(isPresented: $showPDFPicker) {
+            PDFFilePicker { url in
+                if let url, let data = try? Data(contentsOf: url) {
+                    uploadPDF(data, fileName: url.lastPathComponent)
+                }
+            }
+        }
+        .navigationDestination(item: $selectedDocument) { doc in
+            DocumentViewerView(document: doc) {
+                selectedDocument = nil
             }
         }
     }
@@ -306,32 +364,72 @@ struct ApplianceDetailView: View {
     private var documentsSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             SectionHeader("Documents", action: {
-                print("[Detail] Add document")
+                showAddDocSheet = true
             }, actionLabel: "+ Add")
 
-            Button {
-                print("[Detail] Add document inline")
-            } label: {
-                HStack(spacing: 12) {
-                    Image(systemName: "doc.fill")
-                        .font(.system(size: 20))
-                        .foregroundStyle(.secondary)
-                    Text("No documents yet")
-                        .font(.system(size: 15))
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                    Image(systemName: "plus")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(Color.accentTeal)
+            if documents.isEmpty {
+                Button {
+                    showAddDocSheet = true
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: "doc.fill")
+                            .font(.system(size: 20))
+                            .foregroundStyle(.secondary)
+                        Text("No documents yet — tap + to add")
+                            .font(.system(size: 15))
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        Image(systemName: "plus")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(Color.accentTeal)
+                    }
+                    .padding(16)
+                    .frame(maxWidth: .infinity)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(Color(.secondarySystemBackground))
+                    )
                 }
-                .padding(16)
-                .frame(maxWidth: .infinity)
-                .background(
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(Color(.secondarySystemBackground))
-                )
+                .buttonStyle(.plain)
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 12) {
+                        ForEach(documents) { doc in
+                            DocumentThumbnail(
+                                document: doc,
+                                onTap: { selectedDocument = doc },
+                                onDelete: { deleteDocument(doc) }
+                            )
+                        }
+                    }
+                }
+                .scrollClipDisabled()
             }
-            .buttonStyle(.plain)
+        }
+    }
+
+    private func deleteDocument(_ doc: Document) {
+        Task {
+            try? await StorageService.shared.deleteDocument(doc)
+        }
+    }
+
+    private func uploadImage(_ image: UIImage, docType: DocType = .receipt) {
+        let id = appliance.id
+        Task {
+            _ = try? await StorageService.shared.uploadImage(
+                image, entityType: "appliance", entityId: id, docType: docType
+            )
+        }
+    }
+
+    private func uploadPDF(_ data: Data, fileName: String) {
+        let id = appliance.id
+        Task {
+            _ = try? await StorageService.shared.uploadPDF(
+                data, fileName: fileName,
+                entityType: "appliance", entityId: id, docType: .manual
+            )
         }
     }
 

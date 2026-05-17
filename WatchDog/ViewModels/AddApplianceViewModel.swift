@@ -62,6 +62,9 @@ final class AddApplianceViewModel {
     var providerContact: String = ""
 
     var skippedDocuments: Bool = false
+    var pendingReceiptImage: UIImage? = nil
+    var pendingManualPDF: Data? = nil
+    var pendingManualFileName: String? = nil
 
     var reminderNinetyDays: Bool = true
     var reminderThirtyDays: Bool = true

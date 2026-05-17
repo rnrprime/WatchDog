@@ -172,10 +172,31 @@ struct AddApplianceView: View {
                 let reminderDays = viewModel.reminderDaysForWarranty
                 let shouldSchedule = viewModel.hasWarranty
 
+                let receiptImage = viewModel.pendingReceiptImage
+                let manualPDF = viewModel.pendingManualPDF
+                let applianceId = appliance.id
+
                 Task {
                     await SyncService.shared.syncAppliance(appliance)
                     for warranty in warranties {
                         await SyncService.shared.syncWarranty(warranty)
+                    }
+                    if let image = receiptImage {
+                        _ = try? await StorageService.shared.uploadImage(
+                            image,
+                            entityType: "appliance",
+                            entityId: applianceId,
+                            docType: .receipt
+                        )
+                    }
+                    if let pdf = manualPDF {
+                        _ = try? await StorageService.shared.uploadPDF(
+                            pdf,
+                            fileName: viewModel.pendingManualFileName ?? "manual.pdf",
+                            entityType: "appliance",
+                            entityId: applianceId,
+                            docType: .manual
+                        )
                     }
                 }
 

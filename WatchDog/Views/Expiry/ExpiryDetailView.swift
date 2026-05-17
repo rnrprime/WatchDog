@@ -1,5 +1,7 @@
 import SwiftUI
 import SwiftData
+import UIKit
+import PhotosUI
 
 struct ExpiryDetailView: View {
     let item: ExpiryItem
@@ -7,12 +9,30 @@ struct ExpiryDetailView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
 
+    @Query private var documents: [Document]
+
     @State private var showRenewSheet = false
     @State private var showDeleteConfirm = false
     @State private var showRenewedToast = false
     @State private var remind30: Bool = true
     @State private var remind7: Bool = true
     @State private var remind1: Bool = true
+
+    @State private var showAddDocSheet = false
+    @State private var showCamera = false
+    @State private var showPhotosPicker = false
+    @State private var showPDFPicker = false
+    @State private var photoItem: PhotosPickerItem? = nil
+    @State private var selectedDocument: Document? = nil
+
+    init(item: ExpiryItem) {
+        self.item = item
+        let entityId = item.id
+        let predicate = #Predicate<Document> {
+            $0.entityType == "expiry" && $0.entityId == entityId
+        }
+        _documents = Query(filter: predicate, sort: \.uploadedAt, order: .reverse)
+    }
 
     private var daysRemaining: Int {
         Calendar.current.dateComponents([.day], from: .now, to: item.expiryDate).day ?? 0
@@ -26,6 +46,7 @@ struct ExpiryDetailView: View {
                 headerCard
                 countdownCard
                 detailsSection
+                documentsSection
                 remindersSection
                 renewalHistorySection
             }
@@ -75,6 +96,9 @@ struct ExpiryDetailView: View {
             }
         }
         .overlay(alignment: .top) {
+            UploadProgressOverlay()
+        }
+        .overlay(alignment: .top) {
             if showRenewedToast {
                 Text("Renewed! Reminders updated.")
                     .font(.system(size: 14, weight: .semibold))
@@ -85,6 +109,114 @@ struct ExpiryDetailView: View {
                     .padding(.top, 8)
                     .transition(.move(edge: .top).combined(with: .opacity))
             }
+        }
+        .confirmationDialog("Add document", isPresented: $showAddDocSheet, titleVisibility: .visible) {
+            Button("Take photo") { showCamera = true }
+            Button("Choose from library") { showPhotosPicker = true }
+            Button("Pick a file (PDF)") { showPDFPicker = true }
+            Button("Cancel", role: .cancel) {}
+        }
+        .photosPicker(isPresented: $showPhotosPicker, selection: $photoItem, matching: .images)
+        .onChange(of: photoItem) { _, newItem in
+            guard let newItem else { return }
+            Task {
+                if let data = try? await newItem.loadTransferable(type: Data.self),
+                   let image = UIImage(data: data) {
+                    uploadImage(image, docType: .photo)
+                }
+                photoItem = nil
+            }
+        }
+        .fullScreenCover(isPresented: $showCamera) {
+            CameraPicker { image in
+                if let image { uploadImage(image, docType: .photo) }
+                showCamera = false
+            }
+            .ignoresSafeArea()
+        }
+        .sheet(isPresented: $showPDFPicker) {
+            PDFFilePicker { url in
+                if let url, let data = try? Data(contentsOf: url) {
+                    uploadPDF(data, fileName: url.lastPathComponent)
+                }
+            }
+        }
+        .navigationDestination(item: $selectedDocument) { doc in
+            DocumentViewerView(document: doc) {
+                selectedDocument = nil
+            }
+        }
+    }
+
+    private var documentsSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            SectionHeader("Documents", action: {
+                showAddDocSheet = true
+            }, actionLabel: "+ Add")
+
+            if documents.isEmpty {
+                Button {
+                    showAddDocSheet = true
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: "doc.fill")
+                            .font(.system(size: 20))
+                            .foregroundStyle(.secondary)
+                        Text("No documents yet — tap + to add")
+                            .font(.system(size: 15))
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        Image(systemName: "plus")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(Color.accentTeal)
+                    }
+                    .padding(16)
+                    .frame(maxWidth: .infinity)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(Color(.secondarySystemBackground))
+                    )
+                }
+                .buttonStyle(.plain)
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 12) {
+                        ForEach(documents) { doc in
+                            DocumentThumbnail(
+                                document: doc,
+                                onTap: { selectedDocument = doc },
+                                onDelete: { deleteDocument(doc) }
+                            )
+                        }
+                    }
+                }
+                .scrollClipDisabled()
+            }
+        }
+    }
+
+    private func deleteDocument(_ doc: Document) {
+        Task {
+            try? await StorageService.shared.deleteDocument(doc)
+        }
+    }
+
+    private func uploadImage(_ image: UIImage, docType: DocType) {
+        let id = item.id
+        Task {
+            _ = try? await StorageService.shared.uploadImage(
+                image, entityType: "expiry", entityId: id, docType: docType
+            )
+        }
+    }
+
+    private func uploadPDF(_ data: Data, fileName: String) {
+        let id = item.id
+        Task {
+            _ = try? await StorageService.shared.uploadPDF(
+                data, fileName: fileName,
+                entityType: "expiry", entityId: id, docType: .other
+            )
         }
     }
 

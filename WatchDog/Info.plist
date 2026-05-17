@@ -6,5 +6,9 @@
 	<array>
 		<string>remote-notification</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>Watchdog uses the camera to scan receipts and document barcodes.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Watchdog uses the photo library to upload receipts and product photos.</string>
 </dict>
 </plist>

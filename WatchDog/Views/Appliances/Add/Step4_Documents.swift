@@ -1,10 +1,18 @@
 import SwiftUI
+import UIKit
+import UniformTypeIdentifiers
+import VisionKit
 
 struct Step4_Documents: View {
     @Bindable var viewModel: AddApplianceViewModel
     let onSkip: () -> Void
 
-    @State private var showComingSoon: Bool = false
+    @State private var showReceiptScanner: Bool = false
+    @State private var showPDFPicker: Bool = false
+    @State private var ocrResult: OCRResult? = nil
+    @State private var capturedImage: UIImage? = nil
+    @State private var showOCRConfirm: Bool = false
+    @State private var showScannerUnsupported: Bool = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
@@ -20,17 +28,23 @@ struct Step4_Documents: View {
             VStack(spacing: 12) {
                 DocumentCard(
                     icon: "doc.text.fill",
-                    title: "Add receipt",
-                    subtitle: "Photo or PDF — we'll save it securely"
+                    title: receiptTitle,
+                    subtitle: receiptSubtitle,
+                    isAttached: viewModel.pendingReceiptImage != nil
                 ) {
-                    showComingSoon = true
+                    if VNDocumentCameraViewController.isSupported {
+                        showReceiptScanner = true
+                    } else {
+                        showScannerUnsupported = true
+                    }
                 }
                 DocumentCard(
                     icon: "book.fill",
-                    title: "Add product manual",
-                    subtitle: "PDF or photo"
+                    title: manualTitle,
+                    subtitle: manualSubtitle,
+                    isAttached: viewModel.pendingManualPDF != nil
                 ) {
-                    showComingSoon = true
+                    showPDFPicker = true
                 }
             }
 
@@ -40,11 +54,81 @@ struct Step4_Documents: View {
             }
         }
         .padding(24)
-        .alert("Coming soon", isPresented: $showComingSoon) {
+        .fullScreenCover(isPresented: $showReceiptScanner) {
+            ReceiptScannerView(
+                onResult: { result, image in
+                    ocrResult = result
+                    capturedImage = image
+                    showReceiptScanner = false
+                    showOCRConfirm = true
+                },
+                onCancel: {
+                    showReceiptScanner = false
+                }
+            )
+            .ignoresSafeArea()
+        }
+        .sheet(isPresented: $showOCRConfirm) {
+            if let result = ocrResult, let image = capturedImage {
+                OCRConfirmView(
+                    result: result,
+                    image: image,
+                    onConfirm: { date, price, brand in
+                        if let date {
+                            viewModel.purchaseDate = date
+                        }
+                        if let price, viewModel.purchasePrice.isEmpty {
+                            viewModel.purchasePrice = "\(price)"
+                        }
+                        if let brand, viewModel.brand.isEmpty {
+                            viewModel.brand = brand
+                        }
+                        viewModel.pendingReceiptImage = image
+                        showOCRConfirm = false
+                    },
+                    onRetake: {
+                        showOCRConfirm = false
+                        showReceiptScanner = true
+                    },
+                    onEnterManually: {
+                        showOCRConfirm = false
+                    }
+                )
+            }
+        }
+        .sheet(isPresented: $showPDFPicker) {
+            PDFFilePicker { url in
+                guard let url else { return }
+                if let data = try? Data(contentsOf: url) {
+                    viewModel.pendingManualPDF = data
+                    viewModel.pendingManualFileName = url.lastPathComponent
+                }
+            }
+        }
+        .alert("Scanning unavailable", isPresented: $showScannerUnsupported) {
             Button("OK", role: .cancel) {}
         } message: {
-            Text("Document uploads aren't available yet.")
+            Text("Receipt scanning isn't supported on this device.")
         }
+    }
+
+    private var receiptTitle: String {
+        viewModel.pendingReceiptImage == nil ? "Add receipt" : "Receipt attached"
+    }
+
+    private var receiptSubtitle: String {
+        viewModel.pendingReceiptImage == nil
+            ? "Photo or PDF — we'll save it securely"
+            : "Tap to replace"
+    }
+
+    private var manualTitle: String {
+        viewModel.pendingManualPDF == nil ? "Add product manual" : "Manual attached"
+    }
+
+    private var manualSubtitle: String {
+        if let name = viewModel.pendingManualFileName { return name }
+        return "PDF or photo"
     }
 }
 
@@ -52,6 +136,7 @@ private struct DocumentCard: View {
     let icon: String
     let title: String
     let subtitle: String
+    let isAttached: Bool
     let action: () -> Void
 
     var body: some View {
@@ -67,9 +152,16 @@ private struct DocumentCard: View {
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(title)
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(Color(.label))
+                    HStack(spacing: 6) {
+                        Text(title)
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundStyle(Color(.label))
+                        if isAttached {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.system(size: 14))
+                                .foregroundStyle(Color.statusValid)
+                        }
+                    }
                     Text(subtitle)
                         .font(.system(size: 14))
                         .foregroundStyle(.secondary)
@@ -91,5 +183,45 @@ private struct DocumentCard: View {
             )
         }
         .buttonStyle(.plain)
+    }
+}
+
+struct PDFFilePicker: UIViewControllerRepresentable {
+    let onPick: (URL?) -> Void
+
+    func makeCoordinator() -> Coordinator { Coordinator(onPick: onPick) }
+
+    func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
+        let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.pdf])
+        picker.allowsMultipleSelection = false
+        picker.delegate = context.coordinator
+        return picker
+    }
+
+    func updateUIViewController(_ uiViewController: UIDocumentPickerViewController, context: Context) {}
+
+    final class Coordinator: NSObject, UIDocumentPickerDelegate {
+        let onPick: (URL?) -> Void
+
+        init(onPick: @escaping (URL?) -> Void) {
+            self.onPick = onPick
+        }
+
+        func documentPicker(
+            _ controller: UIDocumentPickerViewController,
+            didPickDocumentsAt urls: [URL]
+        ) {
+            guard let url = urls.first else {
+                onPick(nil)
+                return
+            }
+            let didStart = url.startAccessingSecurityScopedResource()
+            defer { if didStart { url.stopAccessingSecurityScopedResource() } }
+            onPick(url)
+        }
+
+        func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
+            onPick(nil)
+        }
     }
 }
