@@ -39,6 +39,7 @@ final class AuthViewModel {
             try await supabase.signInWithApple(idToken: idToken, nonce: nonce)
             UserDefaults.standard.set(false, forKey: "isGuestMode")
             UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
+            Task { await SyncService.shared.pullFromCloud() }
         } catch {
             #if DEBUG
             print("[AuthViewModel] Apple sign in failed: \(error)")

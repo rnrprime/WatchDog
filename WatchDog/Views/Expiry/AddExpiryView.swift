@@ -10,6 +10,8 @@ struct AddExpiryView: View {
     @State private var saveError: String? = nil
     @State private var showDiscardAlert = false
     @State private var previousStep = 1
+    @State private var showPermissionSheet = false
+    @State private var pendingScheduleReminders: (() -> Void)? = nil
 
     private var hasAnyEntry: Bool {
         viewModel.category != nil || !viewModel.name.isEmpty || !viewModel.notes.isEmpty
@@ -95,6 +97,20 @@ struct AddExpiryView: View {
             } message: {
                 Text(saveError ?? "")
             }
+            .sheet(isPresented: $showPermissionSheet, onDismiss: finishAfterPermission) {
+                NotificationPermissionView(
+                    onAccept: {
+                        Task {
+                            _ = await NotificationService.shared.requestAuthorization()
+                            showPermissionSheet = false
+                        }
+                    },
+                    onSkip: {
+                        pendingScheduleReminders = nil
+                        showPermissionSheet = false
+                    }
+                )
+            }
         }
         .interactiveDismissDisabled(hasAnyEntry)
     }
@@ -124,13 +140,46 @@ struct AddExpiryView: View {
     private func performSave() {
         isSaving = true
         Task {
-            defer { isSaving = false }
             do {
-                _ = try await viewModel.save(to: modelContext)
-                dismiss()
+                let item = try await viewModel.save(to: modelContext)
+                let reminderDays = viewModel.reminderDaysForExpiry
+                let shouldSchedule = !reminderDays.isEmpty
+
+                Task {
+                    await SyncService.shared.syncExpiryItem(item)
+                }
+
+                let scheduleReminders: () -> Void = {
+                    guard shouldSchedule else { return }
+                    NotificationService.shared.scheduleExpiryReminders(
+                        for: item, reminderDays: reminderDays
+                    )
+                }
+
+                isSaving = false
+
+                switch NotificationService.shared.authorizationStatus {
+                case .notDetermined where shouldSchedule:
+                    pendingScheduleReminders = scheduleReminders
+                    showPermissionSheet = true
+                case .authorized, .provisional, .ephemeral:
+                    scheduleReminders()
+                    dismiss()
+                default:
+                    dismiss()
+                }
             } catch {
+                isSaving = false
                 saveError = error.localizedDescription
             }
         }
+    }
+
+    private func finishAfterPermission() {
+        if NotificationService.shared.authorizationStatus == .authorized {
+            pendingScheduleReminders?()
+        }
+        pendingScheduleReminders = nil
+        dismiss()
     }
 }

@@ -89,6 +89,15 @@ final class AddApplianceViewModel {
         Double(currentStep) / Double(totalSteps)
     }
 
+    var reminderDaysForWarranty: [Int] {
+        var days: [Int] = []
+        if reminderNinetyDays { days.append(90) }
+        if reminderThirtyDays { days.append(30) }
+        if reminderSevenDays { days.append(7) }
+        days.append(1)
+        return days
+    }
+
     var hasAnyEntry: Bool {
         !name.isEmpty || !brand.isEmpty || !model.isEmpty || !serialNumber.isEmpty
             || category != nil || !purchasePrice.isEmpty || !store.isEmpty || !notes.isEmpty

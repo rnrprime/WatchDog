@@ -107,6 +107,21 @@ struct RenewExpiryView: View {
         item.pendingSync = true
         try? modelContext.save()
         UINotificationFeedbackGenerator().notificationOccurred(.success)
+
+        NotificationService.shared.cancelReminders(entityId: item.id)
+        if NotificationService.shared.authorizationStatus == .authorized {
+            let defaults = UserDefaults.standard
+            var days: [Int] = []
+            if defaults.object(forKey: "expiryReminder30") as? Bool ?? true { days.append(30) }
+            if defaults.object(forKey: "expiryReminder7") as? Bool ?? true { days.append(7) }
+            if defaults.object(forKey: "expiryReminder1") as? Bool ?? false { days.append(1) }
+            if !days.isEmpty {
+                NotificationService.shared.scheduleExpiryReminders(for: item, reminderDays: days)
+            }
+        }
+
+        Task { await SyncService.shared.syncExpiryItem(item) }
+
         onConfirm(chosenDate)
         dismiss()
     }

@@ -20,6 +20,14 @@ final class AddExpiryViewModel {
         !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && category != nil
     }
 
+    var reminderDaysForExpiry: [Int] {
+        var days: [Int] = []
+        if reminder30Days { days.append(30) }
+        if reminder7Days { days.append(7) }
+        if reminder1Day { days.append(1) }
+        return days
+    }
+
     func placeholderName(for category: ExpiryCategory?) -> String {
         switch category {
         case .document: "Passport"

@@ -11,6 +11,8 @@ struct AddApplianceView: View {
     @State private var isSaving = false
     @State private var showDiscardAlert = false
     @State private var previousStep: Int = 1
+    @State private var showPermissionSheet = false
+    @State private var pendingScheduleReminders: (() -> Void)? = nil
 
     private var canProceed: Bool {
         switch viewModel.currentStep {
@@ -96,6 +98,20 @@ struct AddApplianceView: View {
                         .transition(.opacity)
                 }
             }
+            .sheet(isPresented: $showPermissionSheet, onDismiss: finishAfterPermission) {
+                NotificationPermissionView(
+                    onAccept: {
+                        Task {
+                            _ = await NotificationService.shared.requestAuthorization()
+                            showPermissionSheet = false
+                        }
+                    },
+                    onSkip: {
+                        pendingScheduleReminders = nil
+                        showPermissionSheet = false
+                    }
+                )
+            }
         }
         .interactiveDismissDisabled(viewModel.hasAnyEntry)
     }
@@ -150,16 +166,55 @@ struct AddApplianceView: View {
     private func performSave() {
         isSaving = true
         Task {
-            defer { isSaving = false }
             do {
-                _ = try await viewModel.save(to: modelContext)
+                let appliance = try await viewModel.save(to: modelContext)
+                let warranties = appliance.warranties
+                let reminderDays = viewModel.reminderDaysForWarranty
+                let shouldSchedule = viewModel.hasWarranty
+
+                Task {
+                    await SyncService.shared.syncAppliance(appliance)
+                    for warranty in warranties {
+                        await SyncService.shared.syncWarranty(warranty)
+                    }
+                }
+
+                let scheduleReminders: () -> Void = {
+                    guard shouldSchedule, let warranty = warranties.first else { return }
+                    NotificationService.shared.scheduleWarrantyReminders(
+                        for: appliance,
+                        warranty: warranty,
+                        reminderDays: reminderDays
+                    )
+                }
+
                 withAnimation(.easeOut(duration: 0.25)) { showConfetti = true }
                 try? await Task.sleep(nanoseconds: 600_000_000)
-                dismiss()
+                isSaving = false
+
+                switch NotificationService.shared.authorizationStatus {
+                case .notDetermined where shouldSchedule:
+                    pendingScheduleReminders = scheduleReminders
+                    showPermissionSheet = true
+                case .authorized, .provisional, .ephemeral:
+                    scheduleReminders()
+                    dismiss()
+                default:
+                    dismiss()
+                }
             } catch {
+                isSaving = false
                 saveError = error.localizedDescription
             }
         }
+    }
+
+    private func finishAfterPermission() {
+        if NotificationService.shared.authorizationStatus == .authorized {
+            pendingScheduleReminders?()
+        }
+        pendingScheduleReminders = nil
+        dismiss()
     }
 }
 

@@ -55,8 +55,18 @@ struct ExpiryDetailView: View {
             }
         }
         .confirmDelete(isPresented: $showDeleteConfirm, itemName: item.name) {
+            let supabaseId = item.supabaseId
+            let entityId = item.id
             modelContext.delete(item)
             try? modelContext.save()
+            NotificationService.shared.cancelReminders(entityId: entityId)
+            if let id = supabaseId {
+                Task {
+                    await SyncService.shared.deleteFromCloud(
+                        entityType: "expiry_items", supabaseId: id
+                    )
+                }
+            }
             dismiss()
         }
         .sheet(isPresented: $showRenewSheet) {

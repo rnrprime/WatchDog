@@ -69,8 +69,33 @@ struct ApplianceDetailView: View {
             isPresented: $showDeleteConfirm,
             itemName: appliance.name
         ) {
+            let supabaseId = appliance.supabaseId
+            let warrantyIds = appliance.warranties.map(\.id)
+            let warrantySupabaseIds = appliance.warranties.compactMap(\.supabaseId)
+
             modelContext.delete(appliance)
             try? modelContext.save()
+
+            NotificationService.shared.cancelReminders(entityId: appliance.id)
+            for id in warrantyIds {
+                NotificationService.shared.cancelReminders(entityId: id)
+            }
+
+            if let id = supabaseId {
+                Task {
+                    await SyncService.shared.deleteFromCloud(
+                        entityType: "appliances", supabaseId: id
+                    )
+                }
+            }
+            for id in warrantySupabaseIds {
+                Task {
+                    await SyncService.shared.deleteFromCloud(
+                        entityType: "warranties", supabaseId: id
+                    )
+                }
+            }
+
             dismiss()
         }
         .overlay(alignment: .top) {

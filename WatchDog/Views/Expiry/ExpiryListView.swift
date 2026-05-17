@@ -37,8 +37,18 @@ struct ExpiryListView: View {
                         itemName: itemToDelete?.name ?? "this item"
                     ) {
                         if let item = itemToDelete {
+                            let supabaseId = item.supabaseId
+                            let entityId = item.id
                             modelContext.delete(item)
                             try? modelContext.save()
+                            NotificationService.shared.cancelReminders(entityId: entityId)
+                            if let id = supabaseId {
+                                Task {
+                                    await SyncService.shared.deleteFromCloud(
+                                        entityType: "expiry_items", supabaseId: id
+                                    )
+                                }
+                            }
                         }
                         itemToDelete = nil
                     }

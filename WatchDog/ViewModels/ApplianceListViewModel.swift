@@ -78,7 +78,27 @@ final class ApplianceListViewModel {
     }
 
     func deleteAppliance(_ appliance: Appliance, from context: ModelContext) {
+        let supabaseId = appliance.supabaseId
+        let warrantyIds = appliance.warranties.map(\.id)
+        let warrantySupabaseIds = appliance.warranties.compactMap(\.supabaseId)
+
         context.delete(appliance)
         try? context.save()
+
+        NotificationService.shared.cancelReminders(entityId: appliance.id)
+        for wId in warrantyIds {
+            NotificationService.shared.cancelReminders(entityId: wId)
+        }
+
+        if let id = supabaseId {
+            Task {
+                await SyncService.shared.deleteFromCloud(entityType: "appliances", supabaseId: id)
+            }
+        }
+        for wId in warrantySupabaseIds {
+            Task {
+                await SyncService.shared.deleteFromCloud(entityType: "warranties", supabaseId: wId)
+            }
+        }
     }
 }
