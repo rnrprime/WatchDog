@@ -140,6 +140,7 @@ final class SyncService {
             appliance.pendingSync = false
             try? appliance.modelContext?.save()
         } catch {
+            CrashReporter.logError(error, context: ["entity": "appliance"])
             #if DEBUG
             print("[Sync] Appliance sync failed: \(error)")
             #endif
@@ -186,6 +187,7 @@ final class SyncService {
             warranty.pendingSync = false
             try? warranty.modelContext?.save()
         } catch {
+            CrashReporter.logError(error, context: ["entity": "warranty"])
             #if DEBUG
             print("[Sync] Warranty sync failed: \(error)")
             #endif
@@ -229,6 +231,7 @@ final class SyncService {
             item.pendingSync = false
             try? item.modelContext?.save()
         } catch {
+            CrashReporter.logError(error, context: ["entity": "expiry_item"])
             #if DEBUG
             print("[Sync] ExpiryItem sync failed: \(error)")
             #endif

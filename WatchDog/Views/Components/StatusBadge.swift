@@ -19,6 +19,14 @@ struct StatusBadge: View {
         return .statusValid
     }
 
+    private var accessibilityDescription: String {
+        guard let days = daysRemaining else { return "No expiration date" }
+        if days < 0 { return "Expired \(Swift.abs(days)) days ago" }
+        if days == 0 { return "Expires today" }
+        if days == 1 { return "Expires tomorrow" }
+        return "Expires in \(days) days"
+    }
+
     var body: some View {
         Text(label)
             .font(.system(size: 12, weight: .semibold))
@@ -28,6 +36,9 @@ struct StatusBadge: View {
             .background(
                 Capsule().fill(color.opacity(0.15))
             )
+            .animation(.easeInOut(duration: 0.25), value: color)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(accessibilityDescription)
     }
 }
 

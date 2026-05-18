@@ -68,5 +68,23 @@ struct ApplianceRow: View {
         .frame(minHeight: 70)
         .contentShape(Rectangle())
         .background(Color(.systemBackground))
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(accessibilityDescription)
+        .accessibilityHint("Double tap to view appliance details.")
+    }
+
+    private var accessibilityDescription: String {
+        var parts: [String] = [appliance.name]
+        if subtitle != "Brand unknown" { parts.append(subtitle) }
+        if let days = daysRemaining {
+            if days < 0 {
+                parts.append("warranty expired")
+            } else {
+                parts.append("warranty has \(days) days remaining")
+            }
+        } else {
+            parts.append("no warranty tracked")
+        }
+        return parts.joined(separator: ", ")
     }
 }

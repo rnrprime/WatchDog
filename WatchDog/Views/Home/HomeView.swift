@@ -21,7 +21,7 @@ struct HomeView: View {
                     } else {
                         if !viewModel.urgentItems.isEmpty {
                             UrgentBannerView(count: viewModel.urgentItems.count) {
-                                print("[Home] Tap urgent banner")
+                                DebugLog("[Home] Tap urgent banner")
                             }
                         }
 
@@ -46,7 +46,7 @@ struct HomeView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     HStack(spacing: 8) {
                         Button {
-                            print("[Home] Tap notifications")
+                            DebugLog("[Home] Tap notifications")
                         } label: {
                             Image(systemName: "bell.fill")
                                 .overlay(alignment: .topTrailing) {
@@ -59,7 +59,7 @@ struct HomeView: View {
                                 }
                         }
                         Button {
-                            print("[Home] Tap profile")
+                            DebugLog("[Home] Tap profile")
                         } label: {
                             Image(systemName: "person.crop.circle")
                         }
@@ -90,14 +90,14 @@ struct HomeView: View {
                 count: viewModel.applianceCount,
                 systemImage: "refrigerator.fill"
             ) {
-                print("[Home] Tap appliances stat")
+                DebugLog("[Home] Tap appliances stat")
             }
             StatChipView(
                 label: "Warranties",
                 count: viewModel.activeWarrantyCount,
                 systemImage: "shield.fill"
             ) {
-                print("[Home] Tap warranties stat")
+                DebugLog("[Home] Tap warranties stat")
             }
             StatChipView(
                 label: "Expiring",
@@ -105,7 +105,7 @@ struct HomeView: View {
                 systemImage: "clock.fill",
                 tint: viewModel.expiringItemsCount > 0 ? .orange : Color.accentTeal
             ) {
-                print("[Home] Tap expiring stat")
+                DebugLog("[Home] Tap expiring stat")
             }
         }
     }
@@ -113,13 +113,13 @@ struct HomeView: View {
     private var thisMonthSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             SectionHeader("Expiring this month", action: {
-                print("[Home] See all expiring this month")
+                DebugLog("[Home] See all expiring this month")
             })
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 12) {
                     ForEach(viewModel.thisMonthItems) { item in
                         ExpiryMiniCard(item: item) {
-                            print("[Home] Tap mini card \(item.id)")
+                            DebugLog("[Home] Tap mini card \(item.id)")
                         }
                     }
                 }
@@ -131,12 +131,12 @@ struct HomeView: View {
     private var recentSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             SectionHeader("Recently added", action: {
-                print("[Home] View all recents")
+                DebugLog("[Home] View all recents")
             }, actionLabel: "View all")
             VStack(spacing: 0) {
                 ForEach(viewModel.recentItems) { item in
                     RecentRowView(item: item) {
-                        print("[Home] Tap recent \(item.id)")
+                        DebugLog("[Home] Tap recent \(item.id)")
                     }
                 }
             }
@@ -162,10 +162,10 @@ struct HomeView: View {
             .frame(minHeight: 360)
             HStack(spacing: 12) {
                 PrimaryButton(title: "Add appliance") {
-                    print("[Home] Empty: add appliance")
+                    DebugLog("[Home] Empty: add appliance")
                 }
                 SecondaryButton(title: "Track expiry") {
-                    print("[Home] Empty: track expiry")
+                    DebugLog("[Home] Empty: track expiry")
                 }
             }
             .padding(.top, 12)

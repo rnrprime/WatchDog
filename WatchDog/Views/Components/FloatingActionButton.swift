@@ -2,11 +2,12 @@ import SwiftUI
 import UIKit
 
 struct FloatingActionButton: View {
+    var accessibilityLabel: String = "Add"
     let action: () -> Void
 
     var body: some View {
         Button {
-            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            HapticsService.impact(.medium)
             action()
         } label: {
             Circle()
@@ -19,6 +20,8 @@ struct FloatingActionButton: View {
                 )
                 .shadow(color: Color.black.opacity(0.15), radius: 8, x: 0, y: 4)
         }
+        .accessibilityLabel(accessibilityLabel)
+        .accessibilityHint("Double tap to add a new item.")
     }
 }
 

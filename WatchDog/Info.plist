@@ -7,8 +7,14 @@
 		<string>remote-notification</string>
 	</array>
 	<key>NSCameraUsageDescription</key>
-	<string>Watchdog uses the camera to scan receipts and document barcodes.</string>
+	<string>Watchdog uses your camera to scan receipts and product barcodes, saving you time when adding new appliances.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Watchdog uses the photo library to upload receipts and product photos.</string>
+	<string>Watchdog accesses your photos so you can upload receipts and product images for safekeeping.</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>UIRequiredDeviceCapabilities</key>
+	<array>
+		<string>arm64</string>
+	</array>
 </dict>
 </plist>

@@ -152,6 +152,12 @@ final class StorageService {
                 )
         } catch {
             lastUploadError = error.localizedDescription
+            CrashReporter.logError(error, context: [
+                "stage": "storage_upload",
+                "content_type": contentType,
+                "size_bytes": data.count
+            ])
+            BannerManager.shared.showError("Upload failed — we'll retry shortly.")
             throw StorageError.uploadFailed(error.localizedDescription)
         }
 
@@ -179,12 +185,14 @@ final class StorageService {
             do {
                 try await client.from("documents").insert(payload).execute()
             } catch {
+                CrashReporter.logError(error, context: ["stage": "documents_row_insert"])
                 #if DEBUG
                 print("[Storage] documents row insert failed: \(error)")
                 #endif
             }
         }
 
+        AnalyticsService.shared.track(.documentUploaded(type: docType.rawValue))
         return document
     }
 

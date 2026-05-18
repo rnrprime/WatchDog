@@ -106,7 +106,10 @@ struct RenewExpiryView: View {
         item.updatedAt = .now
         item.pendingSync = true
         try? modelContext.save()
-        UINotificationFeedbackGenerator().notificationOccurred(.success)
+        HapticsService.success()
+        AnalyticsService.shared.track(
+            .expiryItemRenewed(category: item.category.rawValue)
+        )
 
         NotificationService.shared.cancelReminders(entityId: item.id)
         if NotificationService.shared.authorizationStatus == .authorized {

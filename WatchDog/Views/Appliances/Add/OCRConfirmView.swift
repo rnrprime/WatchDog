@@ -36,6 +36,14 @@ struct OCRConfirmView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
+                    Color.clear.frame(height: 0).onAppear {
+                        AnalyticsService.shared.track(.ocrScanAttempted)
+                        if result.isUseful {
+                            AnalyticsService.shared.track(
+                                .ocrScanSucceeded(confidence: result.confidence)
+                            )
+                        }
+                    }
                     Image(uiImage: image)
                         .resizable()
                         .scaledToFill()

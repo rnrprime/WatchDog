@@ -140,7 +140,7 @@ struct ExpiryListView: View {
     private func rowEntry(for item: ExpiryItem) -> some View {
         NavigationLink(value: item) {
             ExpiryRow(item: item, onToggleReminder: {
-                print("[Expiry] Toggle reminder for \(item.name)")
+                DebugLog("[Expiry] Toggle reminder for \(item.name)")
             })
         }
         .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
@@ -195,25 +195,6 @@ struct ExpiryListView: View {
             }
         }
 
-        #if DEBUG
-        ToolbarItem(placement: .topBarTrailing) {
-            Menu {
-                Button {
-                    seedTestData()
-                } label: {
-                    Label("Seed test data", systemImage: "ladybug.fill")
-                }
-                Button(role: .destructive) {
-                    clearAllData()
-                } label: {
-                    Label("Clear all expiry data", systemImage: "trash.fill")
-                }
-            } label: {
-                Image(systemName: "ladybug")
-                    .foregroundStyle(Color.accentTeal)
-            }
-        }
-        #endif
     }
 
     private func showToast() {
@@ -224,63 +205,4 @@ struct ExpiryListView: View {
         }
     }
 
-    #if DEBUG
-    private func seedTestData() {
-        let now = Date.now
-        let day: TimeInterval = 86400
-
-        let passport = ExpiryItem(
-            name: "UK Passport",
-            category: .document,
-            expiryDate: now.addingTimeInterval(45 * day),
-            isRecurring: true,
-            recurrenceIntervalDays: 120 * 30
-        )
-        let vitamin = ExpiryItem(
-            name: "Vitamin D Tablets",
-            category: .medication,
-            expiryDate: now.addingTimeInterval(-5 * day)
-        )
-        let oil = ExpiryItem(
-            name: "Olive Oil",
-            category: .food,
-            expiryDate: now.addingTimeInterval(3 * day)
-        )
-        let netflix = ExpiryItem(
-            name: "Netflix Annual",
-            category: .subscription,
-            expiryDate: now.addingTimeInterval(18 * day),
-            isRecurring: true,
-            recurrenceIntervalDays: 12 * 30
-        )
-        let insurance = ExpiryItem(
-            name: "Home Insurance",
-            category: .insurance,
-            expiryDate: now.addingTimeInterval(90 * day),
-            isRecurring: true,
-            recurrenceIntervalDays: 12 * 30
-        )
-        let registration = ExpiryItem(
-            name: "Car Registration",
-            category: .vehicle,
-            expiryDate: now.addingTimeInterval(-2 * day),
-            isRecurring: true,
-            recurrenceIntervalDays: 12 * 30
-        )
-
-        for item in [passport, vitamin, oil, netflix, insurance, registration] {
-            item.pendingSync = true
-            modelContext.insert(item)
-        }
-
-        try? modelContext.save()
-    }
-
-    private func clearAllData() {
-        for item in allItems {
-            modelContext.delete(item)
-        }
-        try? modelContext.save()
-    }
-    #endif
 }

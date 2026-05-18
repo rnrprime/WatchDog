@@ -26,6 +26,10 @@ struct MainTabView: View {
                 .animation(.easeInOut(duration: 0.2), value: syncService.isSyncing)
                 .animation(.easeInOut(duration: 0.2), value: syncService.syncErrorMessage)
         }
+        .overlay(alignment: .top) {
+            ErrorBannerHost()
+                .padding(.top, 4)
+        }
     }
 
     @ViewBuilder

@@ -54,21 +54,37 @@ struct Step4_Documents: View {
             }
         }
         .padding(24)
-        .fullScreenCover(isPresented: $showReceiptScanner) {
+        .fullScreenCover(
+            isPresented: $showReceiptScanner,
+            onDismiss: {
+                if ocrResult != nil && capturedImage != nil {
+                    showOCRConfirm = true
+                }
+            }
+        ) {
             ReceiptScannerView(
                 onResult: { result, image in
                     ocrResult = result
                     capturedImage = image
                     showReceiptScanner = false
-                    showOCRConfirm = true
                 },
                 onCancel: {
+                    ocrResult = nil
+                    capturedImage = nil
                     showReceiptScanner = false
                 }
             )
             .ignoresSafeArea()
         }
-        .sheet(isPresented: $showOCRConfirm) {
+        .sheet(
+            isPresented: $showOCRConfirm,
+            onDismiss: {
+                if showReceiptScanner == false {
+                    ocrResult = nil
+                    capturedImage = nil
+                }
+            }
+        ) {
             if let result = ocrResult, let image = capturedImage {
                 OCRConfirmView(
                     result: result,
@@ -87,8 +103,12 @@ struct Step4_Documents: View {
                         showOCRConfirm = false
                     },
                     onRetake: {
+                        ocrResult = nil
+                        capturedImage = nil
                         showOCRConfirm = false
-                        showReceiptScanner = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
+                            showReceiptScanner = true
+                        }
                     },
                     onEnterManually: {
                         showOCRConfirm = false

@@ -2,6 +2,7 @@ import SwiftUI
 
 struct OnboardingView: View {
     @State private var currentPage: Int = 0
+    @State private var trackedStart = false
 
     private let lastSlideIndex = 2
 
@@ -12,6 +13,7 @@ struct OnboardingView: View {
                     Spacer()
                     if currentPage < lastSlideIndex {
                         Button("Skip") {
+                            AnalyticsService.shared.track(.onboardingSkipped)
                             withAnimation {
                                 currentPage = lastSlideIndex
                             }
@@ -65,6 +67,9 @@ struct OnboardingView: View {
                     } else {
                         NavigationLink {
                             AuthView()
+                                .onAppear {
+                                    AnalyticsService.shared.track(.onboardingCompleted)
+                                }
                         } label: {
                             Text("Get started")
                                 .font(.system(size: 17, weight: .semibold))
@@ -81,6 +86,12 @@ struct OnboardingView: View {
             }
             .background(Color(.systemBackground))
             .toolbar(.hidden, for: .navigationBar)
+            .onAppear {
+                if !trackedStart {
+                    AnalyticsService.shared.track(.onboardingStarted)
+                    trackedStart = true
+                }
+            }
         }
         .transition(.opacity)
     }

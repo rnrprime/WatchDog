@@ -60,7 +60,7 @@ struct ExpiryDetailView: View {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
                     Button {
-                        print("[ExpiryDetail] Edit")
+                        DebugLog("[ExpiryDetail] Edit")
                     } label: {
                         Label("Edit", systemImage: "pencil")
                     }

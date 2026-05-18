@@ -113,6 +113,10 @@ final class AddExpiryViewModel {
         item.pendingSync = true
         context.insert(item)
         try context.save()
+        HapticsService.success()
+        AnalyticsService.shared.track(
+            .expiryItemAddCompleted(category: category.rawValue)
+        )
         return item
     }
 }

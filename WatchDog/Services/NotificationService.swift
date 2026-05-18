@@ -159,12 +159,18 @@ final class NotificationService {
 
         switch entityType {
         case "warranty":
+            AnalyticsService.shared.track(
+                .reminderNotificationTapped(entityType: "warranty")
+            )
             if let applianceIdString = userInfo["applianceId"] as? String,
                let applianceId = UUID(uuidString: applianceIdString) {
                 return .appliance(applianceId)
             }
-            return .none
+            return nil
         case "expiry":
+            AnalyticsService.shared.track(
+                .reminderNotificationTapped(entityType: "expiry")
+            )
             return .expiry(entityId)
         default:
             return nil

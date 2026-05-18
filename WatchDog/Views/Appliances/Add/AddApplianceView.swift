@@ -34,6 +34,11 @@ struct AddApplianceView: View {
                     currentStep: viewModel.currentStep,
                     totalSteps: viewModel.totalSteps
                 )
+                .onAppear {
+                    if viewModel.currentStep == 1 {
+                        AnalyticsService.shared.track(.applianceAddStarted)
+                    }
+                }
 
                 ZStack {
                     stepContent
@@ -80,7 +85,12 @@ struct AddApplianceView: View {
                 }
             }
             .alert("Discard changes?", isPresented: $showDiscardAlert) {
-                Button("Discard", role: .destructive) { dismiss() }
+                Button("Discard", role: .destructive) {
+                    AnalyticsService.shared.track(
+                        .applianceAddCancelled(atStep: viewModel.currentStep)
+                    )
+                    dismiss()
+                }
                 Button("Keep editing", role: .cancel) {}
             } message: {
                 Text("Your entries will be lost.")

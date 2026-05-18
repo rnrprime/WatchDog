@@ -178,7 +178,10 @@ final class AddApplianceViewModel {
         }
 
         try context.save()
-        UINotificationFeedbackGenerator().notificationOccurred(.success)
+        HapticsService.success()
+        AnalyticsService.shared.track(
+            .applianceAddCompleted(category: category.rawValue)
+        )
         return appliance
     }
 }

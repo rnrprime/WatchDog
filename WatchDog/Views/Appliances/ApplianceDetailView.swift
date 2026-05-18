@@ -65,6 +65,9 @@ struct ApplianceDetailView: View {
         .background(Color(.systemBackground))
         .navigationTitle(appliance.name)
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            AnalyticsService.shared.track(.applianceDetailViewed)
+        }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
@@ -270,7 +273,7 @@ struct ApplianceDetailView: View {
             }
 
             PrimaryButton(title: "Add extended warranty") {
-                print("[Detail] Add extended warranty")
+                DebugLog("[Detail] Add extended warranty")
             }
         }
         .padding(20)
@@ -291,7 +294,7 @@ struct ApplianceDetailView: View {
                 .font(.system(size: 15))
                 .foregroundStyle(.secondary)
             SecondaryButton(title: "+ Add warranty") {
-                print("[Detail] Add warranty")
+                DebugLog("[Detail] Add warranty")
             }
         }
         .frame(maxWidth: .infinity)

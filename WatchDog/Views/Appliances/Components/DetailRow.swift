@@ -38,7 +38,11 @@ struct DetailRow: View {
                 if isCopyable, let value, !value.isEmpty {
                     Button {
                         UIPasteboard.general.string = value
-                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                        HapticsService.impact(.medium)
+                        if label.localizedCaseInsensitiveContains("serial") {
+                            AnalyticsService.shared.track(.serialNumberCopied)
+                        }
+                        BannerManager.shared.showSuccess("\(label) copied")
                         onCopy?(value)
                     } label: {
                         Image(systemName: "doc.on.doc")
@@ -49,6 +53,7 @@ struct DetailRow: View {
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("Copy \(label)")
+                    .accessibilityHint("Double tap to copy the \(label.lowercased()) to clipboard.")
                 }
             }
             .padding(.horizontal, 16)

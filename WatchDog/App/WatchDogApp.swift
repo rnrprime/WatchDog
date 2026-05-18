@@ -9,6 +9,10 @@ struct WatchDogApp: App {
     let modelContainer: ModelContainer
 
     init() {
+        // Bring up crash reporting first so any error during the rest of
+        // launch is captured by Sentry.
+        CrashReporter.configure()
+
         do {
             modelContainer = try ModelContainer(
                 for: Appliance.self,
@@ -19,9 +23,12 @@ struct WatchDogApp: App {
                 UserProfile.self
             )
         } catch {
+            CrashReporter.logError(error, context: ["stage": "modelContainer.init"])
             fatalError("Failed to create ModelContainer: \(error)")
         }
         SyncService.shared.setup(container: modelContainer)
+        _ = RevenueCatService.shared  // configure SDK at launch
+        _ = AnalyticsService.shared   // configure PostHog at launch
     }
 
     var body: some Scene {

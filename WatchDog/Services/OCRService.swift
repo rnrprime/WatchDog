@@ -13,7 +13,7 @@ struct OCRResult: Sendable {
         purchaseDate != nil || purchasePrice != nil || brandName != nil
     }
 
-    static let empty = OCRResult(
+    nonisolated static let empty = OCRResult(
         rawText: "",
         purchaseDate: nil,
         purchasePrice: nil,

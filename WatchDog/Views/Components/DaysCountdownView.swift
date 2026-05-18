@@ -32,10 +32,21 @@ struct DaysCountdownView: View {
         }
     }
 
+    private var accessibilityDescription: String {
+        let abs = Swift.abs(days)
+        if days < 0 { return "Expired \(abs) days ago" }
+        if days == 0 { return "Expires today" }
+        if days == 1 { return "Expires tomorrow" }
+        return "\(days) days remaining until expiry"
+    }
+
     var body: some View {
         Text(text)
             .font(style == .full ? .headline : .subheadline)
             .foregroundStyle(color)
+            .contentTransition(.numericText())
+            .animation(.easeInOut(duration: 0.25), value: days)
+            .accessibilityLabel(accessibilityDescription)
     }
 }
 
