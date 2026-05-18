@@ -1,31 +1,34 @@
 import SwiftUI
 
+/// Pure content card — tap is provided by parent NavigationLink.
 struct ExpiryMiniCard: View {
     let item: UrgentItem
-    var action: (() -> Void)? = nil
 
     var body: some View {
-        Button {
-            action?()
-        } label: {
-            VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top) {
                 icon
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.tertiary)
+            }
+            VStack(alignment: .leading, spacing: 4) {
                 Text(item.name)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(Color(.label))
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
-                Spacer(minLength: 0)
                 DaysCountdownView(endDate: item.endDate, style: .compact)
             }
-            .frame(width: 160, height: 120, alignment: .topLeading)
-            .padding(12)
-            .background(
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(Color(.secondarySystemBackground))
-            )
         }
-        .buttonStyle(.plain)
+        .frame(width: 168, alignment: .topLeading)
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 18)
+                .fill(Color(.secondarySystemBackground))
+        )
+        .contentShape(RoundedRectangle(cornerRadius: 18))
     }
 
     @ViewBuilder

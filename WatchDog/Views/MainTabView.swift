@@ -3,20 +3,25 @@ import SwiftUI
 struct MainTabView: View {
     @State private var syncService = SyncService.shared
     @State private var dismissedError: String? = nil
+    @State private var selectedTab: Int = 0
 
     var body: some View {
-        TabView {
-            HomeView()
+        TabView(selection: $selectedTab) {
+            HomeView(onSwitchTab: { selectedTab = $0 })
                 .tabItem { Label("Home", systemImage: "house.fill") }
+                .tag(0)
 
             ApplianceListView()
                 .tabItem { Label("Appliances", systemImage: "refrigerator.fill") }
+                .tag(1)
 
             ExpiryListView()
                 .tabItem { Label("Expiry", systemImage: "clock.badge.exclamationmark") }
+                .tag(2)
 
             SettingsView()
                 .tabItem { Label("Settings", systemImage: "gearshape.fill") }
+                .tag(3)
         }
         .tint(Color.accentTeal)
         .overlay(alignment: .top) {

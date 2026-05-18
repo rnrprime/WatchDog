@@ -4,7 +4,8 @@ struct Step1_EntryMethod: View {
     @Bindable var viewModel: AddApplianceViewModel
     let onAdvance: () -> Void
 
-    @State private var showComingSoon = false
+    @State private var showSerialScanner = false
+    @State private var showBarcodeScanner = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -27,7 +28,7 @@ struct Step1_EntryMethod: View {
                     tag: "PRIMARY"
                 ) {
                     viewModel.entryMethod = .scanSerial
-                    showComingSoon = true
+                    showSerialScanner = true
                 }
 
                 EntryMethodCard(
@@ -37,7 +38,7 @@ struct Step1_EntryMethod: View {
                     tag: nil
                 ) {
                     viewModel.entryMethod = .scanBarcode
-                    showComingSoon = true
+                    showBarcodeScanner = true
                 }
 
                 EntryMethodCard(
@@ -52,14 +53,42 @@ struct Step1_EntryMethod: View {
             }
         }
         .padding(24)
-        .alert("Coming soon", isPresented: $showComingSoon) {
-            Button("Enter manually") {
-                viewModel.entryMethod = .manual
-                onAdvance()
-            }
-            Button("Cancel", role: .cancel) { viewModel.entryMethod = nil }
-        } message: {
-            Text("Scanning isn't available yet. You can enter the details manually for now.")
+        .fullScreenCover(isPresented: $showSerialScanner) {
+            SerialNumberScannerView(
+                onResult: { serial in
+                    viewModel.serialNumber = serial
+                    showSerialScanner = false
+                    onAdvance()
+                },
+                onCancel: {
+                    showSerialScanner = false
+                    viewModel.entryMethod = nil
+                }
+            )
+        }
+        .fullScreenCover(isPresented: $showBarcodeScanner) {
+            BarcodeScannerView(
+                onResult: { brand, model in
+                    if let brand, viewModel.brand.isEmpty {
+                        viewModel.brand = brand
+                    }
+                    if let model, viewModel.model.isEmpty {
+                        viewModel.model = model
+                    }
+                    showBarcodeScanner = false
+                    BannerManager.shared.showSuccess("Brand & model auto-filled")
+                    onAdvance()
+                },
+                onManualFallback: {
+                    showBarcodeScanner = false
+                    viewModel.entryMethod = .manual
+                    onAdvance()
+                },
+                onCancel: {
+                    showBarcodeScanner = false
+                    viewModel.entryMethod = nil
+                }
+            )
         }
     }
 }
